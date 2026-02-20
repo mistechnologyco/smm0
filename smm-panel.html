@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMMPro – Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK (Compat version) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff10;
+    --accent: #c8ff00;
+    --accent2: #7c3aed;
+    --accent3: #f97316;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --pink: #ec4899;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+  .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; padding: 0 24px 32px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .nav-section { padding: 0 12px; margin-bottom: 8px; }
+  .nav-label { font-size: 10px; font-weight: 500; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; padding: 0 12px; margin-bottom: 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 14px; transition: all 0.15s; margin-bottom: 2px; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent); color: #000; font-weight: 600; }
+  .nav-icon { font-size: 16px; }
+  .sidebar-bottom { margin-top: auto; padding: 0 12px; }
+  .user-card { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--surface2); border-radius: 10px; }
+  .user-avatar { width: 34px; height: 34px; background: linear-gradient(135deg, var(--accent2), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-plan { font-size: 11px; color: var(--muted); }
+
+  .main { margin-left: 240px; flex: 1; padding: 32px 36px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .header-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+  .header-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .btn-ghost { background: var(--surface2); color: var(--text); }
+  .btn-ghost:hover { background: #252535; }
+  .btn-accent { background: var(--accent); color: #000; font-weight: 700; }
+  .btn-accent:hover { filter: brightness(1.1); }
+  .btn-danger { background: #ef444420; color: var(--red); }
+  .btn-danger:hover { background: #ef444435; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); padding: 4px; border-radius: 10px; width: fit-content; }
+  .tab { padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--surface2); color: var(--text); }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; position: relative; overflow: hidden; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+  .stat-change { font-size: 12px; margin-top: 6px; }
+  .stat-change.up { color: var(--accent); }
+  .stat-change.down { color: var(--red); }
+  .stat-dot { position: absolute; right: -20px; top: -20px; width: 80px; height: 80px; border-radius: 50%; opacity: 0.12; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 340px; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 360px; gap: 20px; margin-bottom: 20px; }
+  .grid-cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .card-action { font-size: 12px; color: var(--accent); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .card-action:hover { background: #c8ff0015; }
+
+  .chart-wrap { height: 180px; display: flex; align-items: flex-end; gap: 6px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .chart-bar { width: 100%; border-radius: 5px 5px 0 0; cursor: pointer; position: relative; }
+  .chart-bar:hover { filter: brightness(1.4); }
+  .chart-label { font-size: 11px; color: var(--muted); }
+  .chart-legend { display: flex; gap: 14px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  .tooltip {
+    position: fixed; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; pointer-events: none;
+    z-index: 9999; opacity: 0; transition: opacity 0.1s; box-shadow: 0 8px 24px #00000080;
+  }
+  .tooltip.show { opacity: 1; }
+
+  .platform-item { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .platform-item:last-child { margin-bottom: 0; }
+  .platform-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .platform-info { flex: 1; }
+  .platform-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .platform-bar-bg { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .platform-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .platform-pct { font-size: 12px; color: var(--muted); min-width: 35px; text-align: right; }
+
+  .cal-nav { display: flex; align-items: center; gap: 12px; }
+  .cal-nav-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--surface2); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .cal-nav-btn:hover { background: #252535; }
+  .cal-month-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; min-width: 150px; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-top: 12px; }
+  .cal-head { text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; padding: 4px; }
+  .cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; position: relative; transition: background 0.15s; }
+  .cal-day:hover:not(.empty) { background: var(--surface2); }
+  .cal-day.today { background: var(--accent); color: #000; font-weight: 700; }
+  .cal-day.empty { opacity: 0; pointer-events: none; }
+  .post-dots { display: flex; gap: 2px; margin-top: 2px; }
+  .post-dot { width: 4px; height: 4px; border-radius: 50%; }
+
+  .detail-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 360px; background: var(--surface); border-left: 1px solid var(--border); z-index: 50; transform: translateX(100%); transition: transform 0.25s ease; display: flex; flex-direction: column; }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .detail-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .detail-close { width: 30px; height: 30px; background: var(--surface2); border: none; color: var(--text); border-radius: 8px; cursor: pointer; font-size: 16px; }
+  .detail-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .detail-post { background: var(--surface2); border-radius: 10px; padding: 14px; margin-bottom: 8px; border: 1px solid var(--border); cursor: pointer; }
+  .detail-post:hover { border-color: var(--accent); }
+  .detail-post-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .detail-post-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .detail-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 0; }
+
+  .queue-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .post-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+  .post-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s; }
+  .post-item:hover { border-color: var(--accent); }
+  .post-thumb { width: 40px; height: 40px; border-radius: 8px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .post-content { flex: 1; min-width: 0; }
+  .post-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .post-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
+  .post-actions { display: flex; gap: 4px; }
+  .post-action-btn { width: 28px; height: 28px; border-radius: 6px; background: var(--surface); border: none; color: var(--muted); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .post-action-btn:hover { color: var(--text); }
+  .post-action-btn.del:hover { color: var(--red); }
+  .post-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+  .status-scheduled { background: #c8ff0018; color: var(--accent); }
+  .status-published { background: #3b82f618; color: var(--blue); }
+  .status-draft { background: #6b6b8018; color: var(--muted); }
+
+  .top-post { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .top-post:hover { opacity: 0.8; }
+  .top-post:last-child { border-bottom: none; }
+  .top-rank { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--surface2); min-width: 28px; }
+  .top-rank.gold { color: #f59e0b; }
+
+  .aud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .aud-item { background: var(--surface2); border-radius: 10px; padding: 14px; }
+  .aud-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .aud-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+  .aud-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: #00000088; z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 520px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.2s; }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; }
+  .form-input:focus { outline: none; border-color: var(--accent); }
+  select.form-input option { background: #1a1a24; }
+  .plat-select { display: flex; gap: 8px; flex-wrap: wrap; }
+  .plat-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .plat-btn.sel { border-color: var(--accent); color: var(--accent); background: #c8ff0012; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .report-row:last-child { border-bottom: none; }
+  .report-val { font-weight: 600; color: var(--accent); }
+  .report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-live { background: #ef444420; color: var(--red); }
+  .live-dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  .search-wrap { position: relative; }
+  .search-wrap::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; pointer-events:none; }
+  .search-wrap input { padding-left: 34px; }
+
+  .notification { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 18px; font-size: 13px; z-index: 9000; transform: translateY(80px); opacity: 0; transition: all 0.3s; box-shadow: 0 8px 32px #00000060; }
+  .notification.show { transform: translateY(0); opacity: 1; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+  textarea.form-input { resize: vertical; }
+
+  /* Account Cards */
+  .account-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 16px; transition: border-color 0.15s; }
+  .account-card:hover { border-color: var(--accent); }
+  .account-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+  .account-info { flex: 1; }
+  .account-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .account-username { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .account-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .account-stat { text-align: center; }
+  .account-stat-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .account-stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .account-actions { display: flex; gap: 6px; }
+
+  /* Settings Form */
+  .settings-section { margin-bottom: 32px; }
+  .settings-section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+</style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<nav class="sidebar">
+  <div class="logo">SMM<span>Pro</span></div>
+  <div class="nav-section">
+    <div class="nav-label">Genel</div>
+    <div class="nav-item active" onclick="go('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="go('calendar',this)"><span class="nav-icon">📅</span> Takvim</div>
+    <div class="nav-item" onclick="go('posts',this)"><span class="nav-icon">📝</span> İçerikler</div>
+  </div>
+  <div class="nav-section" style="margin-top:12px;">
+    <div class="nav-label">Analitik</div>
+    <div class="nav-item" onclick="go('analytics',this)"><span class="nav-icon">📈</span> Performans</div>
+    <div class="nav-item" onclick="go('report',this)"><span class="nav-icon">📋</span> Raporlar</div>
+  </div>
+  <div class="nav-section" style="margin-top:12px;">
+    <div class="nav-label">Yönetim</div>
+    <div class="nav-item" onclick="go('accounts',this)"><span class="nav-icon">👤</span> Hesaplar</div>
+    <div class="nav-item" onclick="go('settings',this)"><span class="nav-icon">⚙️</span> Ayarlar</div>
+  </div>
+  <div class="sidebar-bottom"></div>
+    <div class="user-card">
+      <div class="user-avatar">SP</div>
+      <div><div class="user-name">SMMPro</div><div class="user-plan">Yerel Panel</div></div>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="header">
+      <div><div class="header-title">Dashboard</div><div class="header-sub" id="dashSub">–</div></div>
+      <div class="header-actions">
+        <div class="badge badge-live"><span class="live-dot"></span> Canlı</div>
+        <button class="btn btn-ghost" onclick="doExport()">📤 Dışa Aktar</button>
+        <button class="btn btn-accent" onclick="openModal()">+ Yeni İçerik</button>
+      </div>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Haftalık Erişim & Etkileşim</div>
+          <div class="card-action" onclick="go('analytics',null)">Detay →</div>
+        </div>
+        <div class="chart-wrap" id="mainChart"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Erişim</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Etkileşim</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Platform Dağılımı</div></div>
+        <div id="platList"></div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header"><div class="card-title">🏆 En İyi İçerikler</div></div>
+        <div id="topPostsEl"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">👥 Kitle Analizi</div></div>
+        <div class="aud-grid">
+          <div class="aud-item"><div class="aud-label">Takipçi</div><div class="aud-val" id="audF">–</div><div class="aud-sub" id="audG">–</div></div>
+          <div class="aud-item"><div class="aud-label">Aktif</div><div class="aud-val">64%</div><div class="aud-sub">günlük</div></div>
+          <div class="aud-item"><div class="aud-label">Etkileşim</div><div class="aud-val" id="audR">–</div><div class="aud-sub">oran</div></div>
+          <div class="aud-item"><div class="aud-label">İzlenme</div><div class="aud-val">8.3s</div><div class="aud-sub">içerik başına</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Gönderi Kuyruğu</div>
+          <div class="card-action" onclick="openModal()">+ Ekle</div>
+        </div>
+        <div class="queue-filter" id="qStatusFilter">
+          <button class="filter-btn active" onclick="qFilter(this,'all')">Tümü</button>
+          <button class="filter-btn" onclick="qFilter(this,'scheduled')">Zamanlandı</button>
+          <button class="filter-btn" onclick="qFilter(this,'draft')">Taslak</button>
+          <button class="filter-btn" onclick="qFilter(this,'published')">Yayında</button>
+        </div>
+        <div class="queue-filter" id="qPlatFilter">
+          <button class="filter-btn active" onclick="qPlatFn(this,'all')">📋 Tümü</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'Instagram')" title="Instagram">📸</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'Twitter')" title="Twitter">🐦</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'Facebook')" title="Facebook">📘</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'YouTube')" title="YouTube">▶️</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'LinkedIn')" title="LinkedIn">💼</button>
+          <button class="filter-btn" onclick="qPlatFn(this,'TikTok')" title="TikTok">🎵</button>
+        </div>
+        <div class="post-list" id="queueEl"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📅 İçerik Takvimi</div>
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="chMonth(-1)">‹</button>
+          <div class="cal-month-label" id="calLbl1"></div>
+          <button class="cal-nav-btn" onclick="chMonth(1)">›</button>
+        </div>
+      </div>
+      <div id="cal1"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR PAGE -->
+  <div class="page" id="page-calendar">
+    <div class="header">
+      <div><div class="header-title">İçerik Takvimi</div><div class="header-sub">Tüm zamanlanmış içerikler</div></div>
+      <div class="header-actions"><button class="btn btn-accent" onclick="openModal()">+ Yeni İçerik</button></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="chMonth(-1)">‹</button>
+          <div class="cal-month-label" id="calLbl2"></div>
+          <button class="cal-nav-btn" onclick="chMonth(1)">›</button>
+        </div>
+        <div class="card-action" onclick="openModal()">+ İçerik Ekle</div>
+      </div>
+      <div id="cal2"></div>
+    </div>
+  </div>
+
+  <!-- POSTS PAGE -->
+  <div class="page" id="page-posts">
+    <div class="header">
+      <div><div class="header-title">İçerikler</div><div class="header-sub" id="postsSub">–</div></div>
+      <div class="header-actions">
+        <div class="search-wrap"><input class="form-input" id="searchInp" placeholder="İçerik ara..." oninput="renderPosts()" style="width:220px;"></div>
+        <button class="btn btn-accent" onclick="openModal()">+ Yeni İçerik</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="postsTab(this,'all')">Tümü</div>
+      <div class="tab" onclick="postsTab(this,'scheduled')">Zamanlandı</div>
+      <div class="tab" onclick="postsTab(this,'published')">Yayında</div>
+      <div class="tab" onclick="postsTab(this,'draft')">Taslak</div>
+    </div>
+    <div class="queue-filter" id="postsPlatFilter" style="margin-bottom:16px;">
+      <button class="filter-btn active" onclick="postsPlatFn(this,'all')">📋 Tüm Platformlar</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'Instagram')">📸 Instagram</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'Twitter')">🐦 Twitter/X</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'Facebook')">📘 Facebook</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'YouTube')">▶️ YouTube</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'LinkedIn')">💼 LinkedIn</button>
+      <button class="filter-btn" onclick="postsPlatFn(this,'TikTok')">🎵 TikTok</button>
+    </div>
+    <div id="postsListEl" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+
+  <!-- ANALYTICS PAGE -->
+  <div class="page" id="page-analytics">
+    <div class="header">
+      <div><div class="header-title">Performans Analizi</div><div class="header-sub">Son 30 gün</div></div>
+    </div>
+    <div class="stats-grid" id="aStats"></div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><div class="card-title">Günlük Erişim – Son 30 Gün</div></div>
+      <div class="chart-wrap" id="aChart" style="height:220px;"></div>
+    </div>
+    <div class="grid-cols-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Platform Performansı</div></div>
+        <div id="aPlatList"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">En Etkili Saatler</div></div>
+        <div id="bestHours"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT PAGE -->
+  <div class="page" id="page-report">
+    <div class="header">
+      <div><div class="header-title">Raporlar</div><div class="header-sub">Performans özeti</div></div>
+      <div class="header-actions"><button class="btn btn-accent" onclick="doExport()">📤 Dışa Aktar</button></div>
+    </div>
+    <div class="report-grid" id="rGrid"></div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">📅 İçerik Tablosu</div></div>
+      <div id="rTable" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ACCOUNTS PAGE -->
+  <div class="page" id="page-accounts">
+    <div class="header">
+      <div><div class="header-title">Sosyal Medya Hesapları</div><div class="header-sub" id="accountsSub">Tüm hesaplarınız</div></div>
+      <div class="header-actions"><button class="btn btn-accent" onclick="openAccountModal()">+ Hesap Ekle</button></div>
+    </div>
+    <div id="accountsList" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;"></div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div class="header">
+      <div><div class="header-title">Ayarlar</div><div class="header-sub">Genel istatistikleri düzenle</div></div>
+      <div class="header-actions"><button class="btn btn-accent" onclick="saveSettings()">💾 Kaydet</button></div>
+    </div>
+    <div class="card">
+      <div class="settings-section">
+        <div class="settings-section-title">📊 Genel İstatistikler</div>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label class="form-label">Toplam Erişim</label>
+            <input class="form-input" type="number" id="setTotalReach" placeholder="250000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Toplam Etkileşim</label>
+            <input class="form-input" type="number" id="setTotalEng" placeholder="18000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Toplam Takipçi</label>
+            <input class="form-input" type="number" id="setTotalFollowers" placeholder="45000">
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">📈 Büyüme Oranları</div>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label class="form-label">Erişim Artışı (%)</label>
+            <input class="form-input" type="number" id="setReachGrowth" placeholder="12.5" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Etkileşim Artışı (%)</label>
+            <input class="form-input" type="number" id="setEngGrowth" placeholder="8.3" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Takipçi Artışı (%)</label>
+            <input class="form-input" type="number" id="setFollowerGrowth" placeholder="5.2" step="0.1">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-header">
+    <div class="detail-title" id="detailTitle">İçerikler</div>
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- NEW/EDIT POST MODAL -->
+<div class="modal-overlay" id="postModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">✍️ Yeni İçerik</div>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label class="form-label">Başlık *</label>
+      <input class="form-input" id="inTitle" placeholder="İçerik başlığı...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Metin</label>
+      <textarea class="form-input" id="inText" rows="3" placeholder="Gönderi metni..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hesaplar * <span style="font-size:10px;color:var(--muted);font-weight:400;">(Hangi hesaplara gönderilsin?)</span></label>
+      <div class="plat-select" id="platBtns">
+        <!-- Dinamik olarak yüklenecek -->
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">Durum</label>
+        <select class="form-input" id="inStatus">
+          <option value="scheduled">Zamanlandı</option>
+          <option value="draft">Taslak</option>
+          <option value="published">Yayında</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tarih</label>
+        <input class="form-input" type="date" id="inDate">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Saat</label>
+      <input class="form-input" type="time" id="inTime" value="10:00">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+      <button class="btn btn-accent" id="saveBtn" onclick="savePost()">Kaydet 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target===this)closeConfirm()">
+  <div class="modal" style="width:360px;" onclick="event.stopPropagation()">
+    <div class="modal-title">🗑️ İçeriği Sil</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Bu işlem geri alınamaz. Emin misiniz?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeConfirm()">İptal</button>
+      <button class="btn btn-danger" onclick="confirmDel()">Sil</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST DETAIL -->
+<div class="modal-overlay" id="pdModal" onclick="if(event.target===this)closePD()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="pdTitle"></div>
+    <div id="pdBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePD()">Kapat</button>
+      <button class="btn btn-ghost" onclick="editFromPD()">✏️ Düzenle</button>
+      <button class="btn btn-danger" onclick="delFromPD()">🗑️ Sil</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="accountModal" onclick="if(event.target===this)closeAccountModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="accountModalTitle">👤 Yeni Hesap Ekle</div>
+    <input type="hidden" id="editAccountId">
+    <div class="form-group">
+      <label class="form-label">Platform *</label>
+      <select class="form-input" id="accPlatform">
+        <option value="Instagram">📸 Instagram</option>
+        <option value="Twitter">🐦 Twitter/X</option>
+        <option value="Facebook">📘 Facebook</option>
+        <option value="YouTube">▶️ YouTube</option>
+        <option value="LinkedIn">💼 LinkedIn</option>
+        <option value="TikTok">🎵 TikTok</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kullanıcı Adı *</label>
+      <input class="form-input" id="accUsername" placeholder="@kullanici_adi">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">Takipçi Sayısı</label>
+        <input class="form-input" type="number" id="accFollowers" placeholder="15000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gönderi Sayısı</label>
+        <input class="form-input" type="number" id="accPosts" placeholder="120">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">Toplam Erişim</label>
+        <input class="form-input" type="number" id="accReach" placeholder="50000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Toplam Etkileşim</label>
+        <input class="form-input" type="number" id="accEngagement" placeholder="3500">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAccountModal()">İptal</button>
+      <button class="btn btn-accent" onclick="saveAccount()">Kaydet 🚀</button>
+    </div>
+  </div>
+</div>
+
+<div class="notification" id="notif"></div>
+
+<script>
+// ---- FIREBASE CONFIG ----
+const firebaseConfig = {
+  apiKey: "AIzaSyAu6TT7TNGe3uy-4dqaLY379nzk9crmJ08",
+  authDomain: "smm0-ce277.firebaseapp.com",
+  projectId: "smm0-ce277",
+  storageBucket: "smm0-ce277.firebasestorage.app",
+  messagingSenderId: "541322030701",
+  appId: "1:541322030701:web:ad7d87c0f797a987e4d964",
+  measurementId: "G-T95X5X5BGX"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ---- CONSTANTS ----
+const ICONS = {Instagram:'📸',Twitter:'🐦',Facebook:'📘',YouTube:'▶️',LinkedIn:'💼',TikTok:'🎵'};
+const COLORS = {Instagram:'var(--pink)',Twitter:'var(--blue)',Facebook:'#1877f2',YouTube:'#ef4444',LinkedIn:'#0ea5e9',TikTok:'var(--accent)'};
+const SLABEL = {scheduled:'Zamanlandı',published:'Yayında',draft:'Taslak'};
+const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const today = new Date();
+
+// ---- DATA (Firebase) ----
+let posts = [];
+let accounts = [];
+let settings = {
+  totalReach: 0,
+  totalEngagement: 0,
+  totalFollowers: 0,
+  reachGrowth: 0,
+  engGrowth: 0,
+  followerGrowth: 0
+};
+
+async function loadPosts() {
+  try {
+    const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Veri yükleme hatası:', error);
+    notify('⚠️ Veriler yüklenemedi!');
+    return [];
+  }
+}
+
+async function savePostToDB(postData, postId = null) {
+  try {
+    if (postId) {
+      await db.collection('posts').doc(postId).update({
+        ...postData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await db.collection('posts').add({
+        ...postData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    return true;
+  } catch (error) {
+    console.error('Kaydetme hatası:', error);
+    notify('⚠️ Kaydetme başarısız!');
+    return false;
+  }
+}
+
+async function deletePostFromDB(postId) {
+  try {
+    await db.collection('posts').doc(postId).delete();
+    return true;
+  } catch (error) {
+    console.error('Silme hatası:', error);
+    notify('⚠️ Silme başarısız!');
+    return false;
+  }
+}
+
+function savePosts() {
+  // Deprecated - Firebase otomatik kaydediyor
+}
+
+// ---- ACCOUNTS FIREBASE ----
+async function loadAccounts() {
+  try {
+    const snapshot = await db.collection('accounts').get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Hesap yükleme hatası:', error);
+    return [];
+  }
+}
+
+async function saveAccountToDB(accountData, accountId = null) {
+  try {
+    if (accountId) {
+      await db.collection('accounts').doc(accountId).update({
+        ...accountData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await db.collection('accounts').add({
+        ...accountData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    return true;
+  } catch (error) {
+    console.error('Hesap kaydetme hatası:', error);
+    notify('⚠️ Hesap kaydedilemedi!');
+    return false;
+  }
+}
+
+async function deleteAccountFromDB(accountId) {
+  try {
+    await db.collection('accounts').doc(accountId).delete();
+    return true;
+  } catch (error) {
+    console.error('Hesap silme hatası:', error);
+    notify('⚠️ Hesap silinemedi!');
+    return false;
+  }
+}
+
+// ---- SETTINGS FIREBASE ----
+async function loadSettings() {
+  try {
+    const doc = await db.collection('settings').doc('general').get();
+    if (doc.exists) {
+      return doc.data();
+    }
+    return {
+      totalReach: 0,
+      totalEngagement: 0,
+      totalFollowers: 0,
+      reachGrowth: 0,
+      engGrowth: 0,
+      followerGrowth: 0
+    };
+  } catch (error) {
+    console.error('Ayar yükleme hatası:', error);
+    return {
+      totalReach: 0,
+      totalEngagement: 0,
+      totalFollowers: 0,
+      reachGrowth: 0,
+      engGrowth: 0,
+      followerGrowth: 0
+    };
+  }
+}
+
+async function saveSettingsToDB(settingsData) {
+  try {
+    await db.collection('settings').doc('general').set({
+      ...settingsData,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Ayar kaydetme hatası:', error);
+    notify('⚠️ Ayarlar kaydedilemedi!');
+    return false;
+  }
+}
+
+function fmt(n){
+  if(n>=1000000)return(n/1000000).toFixed(1)+'M';
+  if(n>=1000)return(n/1000).toFixed(1)+'K';
+  return String(n);
+}
+let monthOff=0;
+let queueFilter='all';
+let queuePlatFilter='all';
+let postsFilter='all';
+let postsPlatFilter='all';
+let deleteTgt=null;
+let pdId=null;
+
+// ---- NOTIFY ----
+function notify(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ---- NAVIGATION ----
+function go(page,navEl){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(navEl){
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    navEl.classList.add('active');
+  }
+  const fn={dashboard:renderDash,calendar:renderCalPage,posts:renderPosts,analytics:renderAnalytics,report:renderReport,accounts:renderAccounts,settings:renderSettings};
+  if(fn[page]) fn[page]();
+}
+
+// ---- STATS ----
+function stats(){
+  // Ayarlardan veya hesaplardan al
+  const reach = settings.totalReach || accounts.reduce((a,acc)=>a+(acc.reach||0),0);
+  const eng = settings.totalEngagement || accounts.reduce((a,acc)=>a+(acc.engagement||0),0);
+  const followers = settings.totalFollowers || accounts.reduce((a,acc)=>a+(acc.followers||0),0);
+  const sched=posts.filter(p=>p.status==='scheduled').length;
+  return {reach,eng,followers,sched};
+}
+
+// ---- DASHBOARD ----
+function renderDash(){
+  const s=stats();
+  document.getElementById('dashSub').textContent=`Şubat 2026 · ${posts.length} içerik · ${accounts.length} hesap`;
+
+  // Stats cards - Ayarlardan veya hesaplardan
+  const reachGrowth = settings.reachGrowth || 12.5;
+  const engGrowth = settings.engGrowth || 8.3;
+  const followerGrowth = settings.followerGrowth || 5.2;
+  
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat-card"><div class="stat-dot" style="background:var(--accent)"></div><div class="stat-label">Toplam Erişim</div><div class="stat-value">${fmt(s.reach)}</div><div class="stat-change up">↑ ${reachGrowth}% bu ay</div></div>
+    <div class="stat-card"><div class="stat-dot" style="background:var(--blue)"></div><div class="stat-label">Etkileşim</div><div class="stat-value">${fmt(s.eng)}</div><div class="stat-change up">↑ ${engGrowth}% bu ay</div></div>
+    <div class="stat-card"><div class="stat-dot" style="background:var(--pink)"></div><div class="stat-label">Toplam Takipçi</div><div class="stat-value">${fmt(s.followers)}</div><div class="stat-change up">↑ ${followerGrowth}% bu ay</div></div>
+    <div class="stat-card"><div class="stat-dot" style="background:var(--accent3)"></div><div class="stat-label">Zamanlanmış</div><div class="stat-value">${s.sched}</div><div class="stat-change up">Sıraya alındı</div></div>
+  `;
+  // Audience
+  document.getElementById('audF').textContent=fmt(s.followers);
+  document.getElementById('audG').textContent=`+${Math.floor(s.followers*followerGrowth/100)} bu ay`;
+  document.getElementById('audR').textContent=s.reach>0?((s.eng/s.reach)*100).toFixed(1)+'%':'0%';
+
+  renderMainChart();
+  renderPlatList('platList');
+  renderTopPosts();
+  renderQueue();
+  renderCal('cal1','calLbl1');
+}
+
+// ---- CHART ----
+function renderMainChart(){
+  const el=document.getElementById('mainChart');
+  if(!el)return;
+  el.innerHTML='';
+  const days=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  const base=[42000,35000,58000,48000,72000,85000,61000];
+  const engB=[3800,2900,6200,4400,8100,9200,5800];
+  const extra=posts.filter(p=>p.status==='published').length;
+  const data=days.map((d,i)=>({day:d,r:base[i]+extra*500,e:engB[i]+extra*50}));
+  const mx=Math.max(...data.map(d=>d.r));
+  data.forEach(d=>{
+    const col=document.createElement('div');
+    col.className='chart-col';
+    const rH=(d.r/mx)*100,eH=(d.e/mx)*100;
+    col.innerHTML=`
+      <div style="width:100%;display:flex;gap:2px;height:100%;align-items:flex-end;">
+        <div class="chart-bar" style="height:${rH}%;background:var(--accent);flex:1;" 
+          data-tip="${d.day}|Erişim: ${fmt(d.r)}|Etkileşim: ${fmt(d.e)}"></div>
+        <div class="chart-bar" style="height:${eH}%;background:var(--accent2);flex:1;"
+          data-tip="${d.day}|Erişim: ${fmt(d.r)}|Etkileşim: ${fmt(d.e)}"></div>
+      </div>
+      <div class="chart-label">${d.day}</div>
+    `;
+    el.appendChild(col);
+  });
+  addTooltips(el);
+}
+
+// ---- TOOLTIP ----
+const tt=document.getElementById('tooltip');
+function addTooltips(container){
+  container.querySelectorAll('[data-tip]').forEach(bar=>{
+    bar.addEventListener('mouseenter',e=>{
+      const parts=bar.dataset.tip.split('|');
+      tt.innerHTML=`<strong>${parts[0]}</strong><br>${parts[1]}<br>${parts[2]||''}`;
+      tt.classList.add('show');
+    });
+    bar.addEventListener('mousemove',e=>{
+      tt.style.left=(e.clientX+12)+'px';
+      tt.style.top=(e.clientY-60)+'px';
+    });
+    bar.addEventListener('mouseleave',()=>tt.classList.remove('show'));
+  });
+}
+
+// ---- PLATFORM LIST ----
+function renderPlatList(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const counts={};
+  posts.forEach(p=>p.platforms.forEach(pl=>{counts[pl]=(counts[pl]||0)+1;}));
+  const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  el.innerHTML=sorted.map(([name,cnt])=>{
+    const pct=Math.round((cnt/total)*100);
+    const col=COLORS[name]||'var(--muted)';
+    return `<div class="platform-item">
+      <div class="platform-icon" style="background:${col}22">${ICONS[name]||'🌐'}</div>
+      <div class="platform-info">
+        <div class="platform-name">${name}</div>
+        <div class="platform-bar-bg"><div class="platform-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      </div>
+      <div class="platform-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ---- TOP POSTS ----
+function renderTopPosts(){
+  const el=document.getElementById('topPostsEl');
+  if(!el)return;
+  const pub=[...posts].filter(p=>p.status==='published').sort((a,b)=>(b.reach||0)-(a.reach||0)).slice(0,3);
+  if(!pub.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:16px 0;">Henüz yayınlanan içerik yok.</div>';return;}
+  el.innerHTML=pub.map((p,i)=>`
+    <div class="top-post" onclick="openPD('${p.id}')">
+      <div class="top-rank ${i===0?'gold':''}">${i+1}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;margin-bottom:3px;">${p.title}</div>
+        <div style="font-size:11px;color:var(--muted)">${fmt(p.reach||0)} erişim · ${fmt(p.eng||0)} etkileşim</div>
+      </div>
+      <div>${ICONS[p.platforms[0]]||'🌐'}</div>
+    </div>
+  `).join('');
+}
+
+// ---- QUEUE ----
+function qFilter(btn,f){
+  document.querySelectorAll('#qStatusFilter .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  queueFilter=f;
+  renderQueue();
+}
+function qPlatFn(btn,p){
+  document.querySelectorAll('#qPlatFilter .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  queuePlatFilter=p;
+  renderQueue();
+}
+function renderQueue(){
+  const el=document.getElementById('queueEl');
+  if(!el)return;
+  let filtered=queueFilter==='all'?posts:posts.filter(p=>p.status===queueFilter);
+  if(queuePlatFilter!=='all') filtered=filtered.filter(p=>p.platforms.includes(queuePlatFilter));
+  const sorted=[...filtered].sort((a,b)=>new Date(a.date+' '+a.time)-new Date(b.date+' '+b.time)).slice(0,6);
+  if(!sorted.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px;">İçerik bulunamadı.</div>';return;}
+  el.innerHTML=sorted.map(p=>`
+    <div class="post-item" onclick="openPD('${p.id}')">
+      <div class="post-thumb">${ICONS[p.platforms[0]]||'🌐'}</div>
+      <div class="post-content">
+        <div class="post-title">${p.title}</div>
+        <div class="post-meta"><span>${p.platforms[0]}</span><span>${p.date} ${p.time}</span></div>
+      </div>
+      <div class="post-actions" onclick="event.stopPropagation()">
+        <button class="post-action-btn" onclick="editPost('${p.id}')">✏️</button>
+        <button class="post-action-btn del" onclick="askDel('${p.id}')">🗑️</button>
+      </div>
+      <div class="post-status status-${p.status}">${SLABEL[p.status]}</div>
+    </div>
+  `).join('');
+}
+
+// ---- CALENDAR ----
+function chMonth(d){monthOff+=d;renderCal('cal1','calLbl1');renderCal('cal2','calLbl2');}
+function renderCal(gridId,lblId){
+  const el=document.getElementById(gridId);
+  const lbl=document.getElementById(lblId);
+  if(!el)return;
+  const d=new Date(today.getFullYear(),today.getMonth()+monthOff,1);
+  if(lbl)lbl.textContent=`${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const yr=d.getFullYear(),mo=d.getMonth();
+  const firstDay=new Date(yr,mo,1).getDay();
+  const dim=new Date(yr,mo+1,0).getDate();
+  const start=firstDay===0?6:firstDay-1;
+  const byDate={};
+  posts.forEach(p=>{
+    const pd=new Date(p.date);
+    if(pd.getFullYear()===yr&&pd.getMonth()===mo){
+      const day=pd.getDate();
+      if(!byDate[day])byDate[day]=[];
+      byDate[day].push(p);
+    }
+  });
+  const DNAMES=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  let html='<div class="cal-grid">';
+  DNAMES.forEach(n=>html+=`<div class="cal-head">${n}</div>`);
+  for(let i=0;i<start;i++)html+=`<div class="cal-day empty"></div>`;
+  for(let day=1;day<=dim;day++){
+    const isT=day===today.getDate()&&mo===today.getMonth()&&yr===today.getFullYear();
+    const dp=byDate[day]||[];
+    const dots=dp.slice(0,3).map(p=>`<div class="post-dot" style="background:${isT?'#000':COLORS[p.platforms[0]]||'var(--accent2)'}"></div>`).join('');
+    html+=`<div class="cal-day ${isT?'today':''}" onclick="openDay(${day},${mo},${yr})">
+      ${day}
+      ${dp.length?`<div class="post-dots">${dots}</div>`:''}
+    </div>`;
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+function openDay(day,mo,yr){
+  const dateStr=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const dp=posts.filter(p=>p.date===dateStr);
+  document.getElementById('detailTitle').textContent=`${day} ${MONTHS[mo]} ${yr}`;
+  if(!dp.length){
+    document.getElementById('detailBody').innerHTML=`<div class="detail-empty">Bu günde içerik yok.<br><br><button class="btn btn-accent" onclick="openModalDate('${dateStr}')">+ İçerik Ekle</button></div>`;
+  } else {
+    document.getElementById('detailBody').innerHTML=dp.map(p=>`
+      <div class="detail-post" onclick="openPD('${p.id}')">
+        <div class="detail-post-title">${ICONS[p.platforms[0]]||'🌐'} ${p.title}</div>
+        <div class="detail-post-meta"><span>${p.platforms.join(', ')}</span><span>${p.time}</span><span class="post-status status-${p.status}">${SLABEL[p.status]}</span></div>
+      </div>
+    `).join('')+`<button class="btn btn-accent" style="width:100%;margin-top:12px;" onclick="openModalDate('${dateStr}')">+ İçerik Ekle</button>`;
+  }
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail(){document.getElementById('detailPanel').classList.remove('open');}
+
+// ---- CALENDAR PAGE ----
+function renderCalPage(){renderCal('cal2','calLbl2');}
+
+// ---- POSTS PAGE ----
+function postsTab(btn,f){
+  document.querySelectorAll('#page-posts .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  postsFilter=f;
+  renderPosts();
+}
+function postsPlatFn(btn,p){
+  document.querySelectorAll('#postsPlatFilter .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  postsPlatFilter=p;
+  renderPosts();
+}
+function renderPosts(){
+  const search=(document.getElementById('searchInp')?.value||'').toLowerCase();
+  let f=postsFilter==='all'?posts:posts.filter(p=>p.status===postsFilter);
+  if(postsPlatFilter!=='all') f=f.filter(p=>p.platforms.includes(postsPlatFilter));
+  if(search)f=f.filter(p=>p.title.toLowerCase().includes(search)||(p.text||'').toLowerCase().includes(search));
+  const sorted=[...f].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('postsSub').textContent=`${sorted.length} içerik`;
+  document.getElementById('postsListEl').innerHTML=sorted.map(p=>`
+    <div class="post-item" style="padding:14px 18px;" onclick="openPD('${p.id}')">
+      <div class="post-thumb" style="font-size:24px;">${ICONS[p.platforms[0]]||'🌐'}</div>
+      <div class="post-content">
+        <div class="post-title" style="max-width:400px;">${p.title}</div>
+        <div class="post-meta">
+          <span>${p.platforms.join(', ')}</span><span>${p.date} ${p.time}</span>
+          ${p.reach?`<span>👁 ${fmt(p.reach)}</span><span>❤️ ${fmt(p.eng)}</span>`:''}
+        </div>
+      </div>
+      <div class="post-actions" onclick="event.stopPropagation()">
+        <button class="post-action-btn" onclick="editPost('${p.id}')">✏️</button>
+        <button class="post-action-btn del" onclick="askDel('${p.id}')">🗑️</button>
+      </div>
+      <div class="post-status status-${p.status}">${SLABEL[p.status]}</div>
+    </div>
+  `).join('')||'<div style="color:var(--muted);font-size:13px;padding:24px;text-align:center;">İçerik bulunamadı.</div>';
+}
+
+// ---- ANALYTICS ----
+function renderAnalytics(){
+  const s=stats();
+  document.getElementById('aStats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Toplam Erişim</div><div class="stat-value">${fmt(s.reach)}</div></div>
+    <div class="stat-card"><div class="stat-label">Etkileşim</div><div class="stat-value">${fmt(s.eng)}</div></div>
+    <div class="stat-card"><div class="stat-label">İçerik Sayısı</div><div class="stat-value">${posts.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Ort. Etkileşim</div><div class="stat-value">${s.reach>0?((s.eng/s.reach)*100).toFixed(1)+'%':'0%'}</div></div>
+  `;
+  // 30-day chart
+  const cel=document.getElementById('aChart');
+  cel.innerHTML='';
+  const vals=Array.from({length:30},(_,i)=>Math.floor(Math.random()*60000+20000));
+  const mx=Math.max(...vals);
+  vals.forEach((v,i)=>{
+    const col=document.createElement('div');
+    col.className='chart-col';
+    col.style.flex='1';
+    col.innerHTML=`
+      <div class="chart-bar" style="height:${(v/mx)*100}%;background:var(--accent);width:100%;"
+        data-tip="Gün ${i+1}|Erişim: ${fmt(v)}|"></div>
+      <div class="chart-label" style="${i%5===0?'':'visibility:hidden'}">${i+1}</div>
+    `;
+    cel.appendChild(col);
+  });
+  addTooltips(cel);
+  renderPlatList('aPlatList');
+  // Best hours
+  const hrs=['09:00','10:00','12:00','18:00','20:00','21:00'];
+  const sc=[72,88,65,91,84,78];
+  document.getElementById('bestHours').innerHTML=hrs.map((h,i)=>`
+    <div class="report-row">
+      <span>${h}</span>
+      <div style="flex:1;margin:0 12px;background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+        <div style="height:100%;width:${sc[i]}%;background:var(--accent);border-radius:4px;"></div>
+      </div>
+      <span class="report-val">${sc[i]}%</span>
+    </div>
+  `).join('');
+}
+
+// ---- REPORT ----
+function renderReport(){
+  const s=stats();
+  const pub=posts.filter(p=>p.status==='published');
+  document.getElementById('rGrid').innerHTML=`
+    <div class="card"><div class="card-header" style="margin-bottom:12px;"><div class="card-title">📊 Genel Özet</div></div>
+      <div class="report-row"><span>Toplam Erişim</span><span class="report-val">${fmt(s.reach)}</span></div>
+      <div class="report-row"><span>Toplam Etkileşim</span><span class="report-val">${fmt(s.eng)}</span></div>
+      <div class="report-row"><span>Etkileşim Oranı</span><span class="report-val">${s.reach>0?((s.eng/s.reach)*100).toFixed(2)+'%':'0%'}</span></div>
+      <div class="report-row"><span>Yayınlanan</span><span class="report-val">${pub.length}</span></div>
+    </div>
+    <div class="card"><div class="card-header" style="margin-bottom:12px;"><div class="card-title">📅 İçerik Özeti</div></div>
+      <div class="report-row"><span>Toplam</span><span class="report-val">${posts.length}</span></div>
+      <div class="report-row"><span>Zamanlanmış</span><span class="report-val">${posts.filter(p=>p.status==='scheduled').length}</span></div>
+      <div class="report-row"><span>Taslak</span><span class="report-val">${posts.filter(p=>p.status==='draft').length}</span></div>
+      <div class="report-row"><span>Yayınlanan</span><span class="report-val">${pub.length}</span></div>
+    </div>
+    <div class="card"><div class="card-header" style="margin-bottom:12px;"><div class="card-title">👥 Kitle</div></div>
+      <div class="report-row"><span>Toplam Takipçi</span><span class="report-val">${fmt(s.followers)}</span></div>
+      <div class="report-row"><span>Aktif Oran</span><span class="report-val">64%</span></div>
+      <div class="report-row"><span>Etkileşim Oranı</span><span class="report-val">${s.reach>0?((s.eng/s.reach)*100).toFixed(1)+'%':'0%'}</span></div>
+      <div class="report-row"><span>Ort. İzlenme</span><span class="report-val">8.3s</span></div>
+    </div>
+  `;
+  const rows=[...posts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,15);
+  document.getElementById('rTable').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:10px;color:var(--muted);font-weight:500;">İçerik</th>
+        <th style="padding:10px;color:var(--muted);font-weight:500;">Platform</th>
+        <th style="padding:10px;color:var(--muted);font-weight:500;">Tarih</th>
+        <th style="padding:10px;color:var(--muted);font-weight:500;">Durum</th>
+        <th style="text-align:right;padding:10px;color:var(--muted);font-weight:500;">Erişim</th>
+        <th style="text-align:right;padding:10px;color:var(--muted);font-weight:500;">Etkileşim</th>
+      </tr></thead>
+      <tbody>${rows.map(p=>`
+        <tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="openPD('${p.id}')">
+          <td style="padding:10px;">${p.title}</td>
+          <td style="padding:10px;text-align:center;">${p.platforms.map(pl=>ICONS[pl]||'').join('')}</td>
+          <td style="padding:10px;color:var(--muted);text-align:center;">${p.date}</td>
+          <td style="padding:10px;text-align:center;"><span class="post-status status-${p.status}">${SLABEL[p.status]}</span></td>
+          <td style="padding:10px;text-align:right;">${fmt(p.reach||0)}</td>
+          <td style="padding:10px;text-align:right;">${fmt(p.eng||0)}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+  `;
+}
+
+// ---- MODAL ----
+function openModal(){
+  resetModal();
+  document.getElementById('modalTitle').textContent='✍️ Yeni İçerik';
+  document.getElementById('saveBtn').textContent='Kaydet 🚀';
+  document.getElementById('postModal').classList.add('open');
+}
+function openModalDate(date){
+  closeDetail();
+  resetModal();
+  document.getElementById('inDate').value=date;
+  document.getElementById('postModal').classList.add('open');
+}
+function resetModal(){
+  document.getElementById('editId').value='';
+  document.getElementById('inTitle').value='';
+  document.getElementById('inText').value='';
+  document.getElementById('inStatus').value='scheduled';
+  document.getElementById('inDate').value=today.toISOString().split('T')[0];
+  document.getElementById('inTime').value='10:00';
+  
+  // Hesap butonlarını dinamik oluştur (her hesap ayrı buton)
+  const platBtns = document.getElementById('platBtns');
+  if(accounts.length === 0) {
+    platBtns.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px;">Önce "Hesaplar" sayfasından sosyal medya hesaplarınızı ekleyin.</div>';
+  } else {
+    platBtns.innerHTML = accounts.map(acc => 
+      `<button class="plat-btn" data-account-id="${acc.id}" data-p="${acc.platform}" onclick="this.classList.toggle('sel')">
+        ${ICONS[acc.platform]||'🌐'} ${acc.username}
+      </button>`
+    ).join('');
+  }
+}
+function closeModal(){document.getElementById('postModal').classList.remove('open');}
+
+async function savePost(){
+  const title=document.getElementById('inTitle').value.trim();
+  const selectedBtns = [...document.querySelectorAll('.plat-btn.sel')];
+  const platforms = selectedBtns.map(b=>b.dataset.p);
+  const accountIds = selectedBtns.map(b=>b.dataset.accountId);
+  
+  if(!title){notify('⚠️ Başlık zorunlu!');return;}
+  if(!platforms.length){notify('⚠️ En az bir hesap seçin!');return;}
+  
+  const editId=document.getElementById('editId').value;
+  const status=document.getElementById('inStatus').value;
+  const pd={
+    title,
+    text:document.getElementById('inText').value,
+    platforms,
+    accountIds, // Hesap ID'lerini de kaydet
+    status,
+    date:document.getElementById('inDate').value,
+    time:document.getElementById('inTime').value,
+    reach:status==='published'?Math.floor(Math.random()*50000+5000):0,
+    eng:0
+  };
+  
+  if(status==='published'){
+    pd.eng=Math.floor(pd.reach*0.07);
+  }
+  
+  // Firebase'e kaydet
+  const success = await savePostToDB(pd, editId || null);
+  if(!success) return;
+  
+  // Verileri yeniden yükle
+  posts = await loadPosts();
+  
+  if(editId){
+    notify('✅ İçerik güncellendi!');
+  } else {
+    notify('🚀 İçerik eklendi!');
+  }
+  
+  closeModal();
+  refresh();
+}
+
+// ---- EDIT / DELETE ----
+function editPost(id){
+  const p=posts.find(x=>String(x.id)===String(id));
+  if(!p)return;
+  
+  // Önce modal'ı resetle (hesap butonlarını oluştur)
+  resetModal();
+  
+  // Sonra değerleri doldur
+  document.getElementById('editId').value=p.id;
+  document.getElementById('inTitle').value=p.title;
+  document.getElementById('inText').value=p.text||'';
+  document.getElementById('inStatus').value=p.status;
+  document.getElementById('inDate').value=p.date;
+  document.getElementById('inTime').value=p.time;
+  
+  // Hesap butonlarını seç (accountIds varsa onları, yoksa platform'a göre)
+  setTimeout(() => {
+    document.querySelectorAll('.plat-btn').forEach(b=>{
+      if(p.accountIds && p.accountIds.includes(b.dataset.accountId)) {
+        b.classList.add('sel');
+      } else if(!p.accountIds && p.platforms.includes(b.dataset.p)) {
+        // Eski içerikler için platform'a göre seç
+        b.classList.add('sel');
+      }
+    });
+  }, 50);
+  
+  document.getElementById('modalTitle').textContent='✏️ İçeriği Düzenle';
+  document.getElementById('saveBtn').textContent='Güncelle';
+  document.getElementById('postModal').classList.add('open');
+}
+function askDel(id){deleteTgt=id;document.getElementById('confirmModal').classList.add('open');}
+function closeConfirm(){deleteTgt=null;document.getElementById('confirmModal').classList.remove('open');}
+async function confirmDel(){
+  if(deleteTgt){
+    // Firebase'den sil
+    const success = await deletePostFromDB(deleteTgt);
+    if(!success) {
+      closeConfirm();
+      return;
+    }
+    
+    // Verileri yeniden yükle
+    posts = await loadPosts();
+    notify('🗑️ Silindi!');
+    refresh();
+  }
+  closeConfirm();
+}
+
+// ---- POST DETAIL ----
+function openPD(id){
+  const p=posts.find(x=>String(x.id)===String(id));
+  if(!p)return;
+  pdId=id;
+  document.getElementById('pdTitle').textContent=`${ICONS[p.platforms[0]]||'🌐'} ${p.title}`;
+  document.getElementById('pdBody').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+      ${p.text?`<div style="background:var(--surface2);padding:14px;border-radius:10px;line-height:1.6;">${p.text}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--surface2);padding:12px;border-radius:10px;"><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">PLATFORM</div>${p.platforms.map(pl=>`${ICONS[pl]||''} ${pl}`).join('<br>')}</div>
+        <div style="background:var(--surface2);padding:12px;border-radius:10px;"><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">DURUM</div><span class="post-status status-${p.status}">${SLABEL[p.status]}</span></div>
+        <div style="background:var(--surface2);padding:12px;border-radius:10px;"><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">TARİH & SAAT</div>${p.date} ${p.time}</div>
+        ${p.reach?`<div style="background:var(--surface2);padding:12px;border-radius:10px;"><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">ERİŞİM</div><strong>${fmt(p.reach)}</strong></div>`:''}
+        ${p.eng?`<div style="background:var(--surface2);padding:12px;border-radius:10px;"><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">ETKİLEŞİM</div><strong>${fmt(p.eng)}</strong></div>`:''}
+      </div>
+    </div>
+  `;
+  document.getElementById('pdModal').classList.add('open');
+}
+function closePD(){document.getElementById('pdModal').classList.remove('open');}
+function editFromPD(){closePD();editPost(pdId);}
+function delFromPD(){closePD();askDel(pdId);}
+
+// ---- EXPORT ----
+function doExport(){
+  const s=stats();
+  const lines=[
+    'SMMPro Raporu','=============',
+    `Tarih: ${new Date().toLocaleDateString('tr-TR')}`,
+    `Toplam Erişim: ${fmt(s.reach)}`,
+    `Etkileşim: ${fmt(s.eng)}`,
+    `Takipçi: ${fmt(s.followers)}`,
+    `Zamanlanmış: ${s.sched}`,
+    `Toplam İçerik: ${posts.length}`,
+    '',
+    'İçerik Listesi:',
+    ...posts.map(p=>`- ${p.title} | ${p.platforms.join(',')} | ${p.date} | ${SLABEL[p.status]} | Erişim: ${fmt(p.reach||0)}`)
+  ];
+  const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='smmpro-rapor.txt';
+  a.click();
+  notify('📤 Rapor indirildi!');
+}
+
+// ---- REFRESH ----
+function refresh(){
+  const active=document.querySelector('.page.active')?.id;
+  const fn={
+    'page-dashboard':renderDash,
+    'page-calendar':renderCalPage,
+    'page-posts':renderPosts,
+    'page-analytics':renderAnalytics,
+    'page-report':renderReport,
+    'page-accounts':renderAccounts,
+    'page-settings':renderSettings
+  };
+  if(fn[active])fn[active]();
+}
+
+// ---- ACCOUNTS PAGE ----
+function renderAccounts(){
+  console.log('renderAccounts çağrıldı, accounts:', accounts);
+  document.getElementById('accountsSub').textContent=`${accounts.length} hesap bağlı`;
+  const el=document.getElementById('accountsList');
+  if(!accounts.length){
+    el.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);">Henüz hesap eklenmemiş. "+ Hesap Ekle" butonuna tıklayın.</div>';
+    return;
+  }
+  el.innerHTML=accounts.map(acc=>`
+    <div class="account-card">
+      <div class="account-icon" style="background:${COLORS[acc.platform]||'var(--surface2)'}20">${ICONS[acc.platform]||'🌐'}</div>
+      <div class="account-info">
+        <div class="account-name">${acc.platform}</div>
+        <div class="account-username">${acc.username}</div>
+        <div class="account-stats">
+          <div class="account-stat"><div class="account-stat-val">${fmt(acc.followers||0)}</div><div class="account-stat-lbl">Takipçi</div></div>
+          <div class="account-stat"><div class="account-stat-val">${fmt(acc.reach||0)}</div><div class="account-stat-lbl">Erişim</div></div>
+          <div class="account-stat"><div class="account-stat-val">${fmt(acc.engagement||0)}</div><div class="account-stat-lbl">Etkileşim</div></div>
+        </div>
+      </div>
+      <div class="account-actions">
+        <button class="btn btn-sm btn-ghost" onclick="editAccount('${acc.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="askDelAccount('${acc.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openAccountModal(){
+  document.getElementById('editAccountId').value='';
+  document.getElementById('accountModalTitle').textContent='👤 Yeni Hesap Ekle';
+  document.getElementById('accPlatform').value='Instagram';
+  document.getElementById('accUsername').value='';
+  document.getElementById('accFollowers').value='';
+  document.getElementById('accPosts').value='';
+  document.getElementById('accReach').value='';
+  document.getElementById('accEngagement').value='';
+  document.getElementById('accountModal').classList.add('open');
+}
+
+function closeAccountModal(){
+  document.getElementById('accountModal').classList.remove('open');
+}
+
+async function saveAccount(){
+  const platform=document.getElementById('accPlatform').value;
+  const username=document.getElementById('accUsername').value.trim();
+  if(!username){notify('⚠️ Kullanıcı adı zorunlu!');return;}
+  
+  const accountData={
+    platform,
+    username,
+    followers:parseInt(document.getElementById('accFollowers').value)||0,
+    posts:parseInt(document.getElementById('accPosts').value)||0,
+    reach:parseInt(document.getElementById('accReach').value)||0,
+    engagement:parseInt(document.getElementById('accEngagement').value)||0
+  };
+  
+  const editId=document.getElementById('editAccountId').value;
+  const success=await saveAccountToDB(accountData,editId||null);
+  if(!success)return;
+  
+  accounts=await loadAccounts();
+  notify(editId?'✅ Hesap güncellendi!':'🚀 Hesap eklendi!');
+  closeAccountModal();
+  renderAccounts();
+}
+
+function editAccount(id){
+  const acc=accounts.find(a=>a.id===id);
+  if(!acc)return;
+  document.getElementById('editAccountId').value=acc.id;
+  document.getElementById('accountModalTitle').textContent='✏️ Hesabı Düzenle';
+  document.getElementById('accPlatform').value=acc.platform;
+  document.getElementById('accUsername').value=acc.username;
+  document.getElementById('accFollowers').value=acc.followers||'';
+  document.getElementById('accPosts').value=acc.posts||'';
+  document.getElementById('accReach').value=acc.reach||'';
+  document.getElementById('accEngagement').value=acc.engagement||'';
+  document.getElementById('accountModal').classList.add('open');
+}
+
+async function askDelAccount(id){
+  if(!confirm('Bu hesabı silmek istediğinize emin misiniz?'))return;
+  const success=await deleteAccountFromDB(id);
+  if(!success)return;
+  accounts=await loadAccounts();
+  notify('🗑️ Hesap silindi!');
+  renderAccounts();
+}
+
+// ---- SETTINGS PAGE ----
+function renderSettings(){
+  console.log('renderSettings çağrıldı, settings:', settings);
+  document.getElementById('setTotalReach').value=settings.totalReach||'';
+  document.getElementById('setTotalEng').value=settings.totalEngagement||'';
+  document.getElementById('setTotalFollowers').value=settings.totalFollowers||'';
+  document.getElementById('setReachGrowth').value=settings.reachGrowth||'';
+  document.getElementById('setEngGrowth').value=settings.engGrowth||'';
+  document.getElementById('setFollowerGrowth').value=settings.followerGrowth||'';
+}
+
+async function saveSettings(){
+  const settingsData={
+    totalReach:parseInt(document.getElementById('setTotalReach').value)||0,
+    totalEngagement:parseInt(document.getElementById('setTotalEng').value)||0,
+    totalFollowers:parseInt(document.getElementById('setTotalFollowers').value)||0,
+    reachGrowth:parseFloat(document.getElementById('setReachGrowth').value)||0,
+    engGrowth:parseFloat(document.getElementById('setEngGrowth').value)||0,
+    followerGrowth:parseFloat(document.getElementById('setFollowerGrowth').value)||0
+  };
+  
+  const success=await saveSettingsToDB(settingsData);
+  if(!success)return;
+  
+  settings=await loadSettings();
+  notify('💾 Ayarlar kaydedildi!');
+  renderDash(); // Dashboard'u güncelle
+}
+
+// ---- INIT ----
+// Firebase'den verileri yükle
+Promise.all([
+  loadPosts(),
+  loadAccounts(),
+  loadSettings()
+]).then(([postsData, accountsData, settingsData]) => {
+  posts = postsData;
+  accounts = accountsData;
+  settings = settingsData;
+  renderDash();
+}).catch(error => {
+  console.error('Başlatma hatası:', error);
+  notify('⚠️ Bağlantı hatası!');
+  renderDash(); // Boş veriyle de göster
+});
+</script>
+</body>
+</html>
