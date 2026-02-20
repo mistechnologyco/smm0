@@ -230,6 +230,59 @@
   .login-btn:hover { filter: brightness(1.1); }
   .login-footer { text-align: center; margin-top: 24px; font-size: 11px; color: var(--muted); }
 
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; min-height: auto; position: relative; padding: 16px 0; border-right: none; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 16px; padding: 0 16px 16px; }
+    .nav-section { padding: 0 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .nav-label { display: none; }
+    .nav-item { font-size: 12px; padding: 8px 10px; margin-bottom: 0; }
+    .nav-icon { font-size: 14px; }
+    .sidebar-bottom { margin-top: 12px; padding: 0 8px; }
+    .user-card { padding: 10px; }
+    .user-avatar { width: 28px; height: 28px; font-size: 11px; }
+    .user-name { font-size: 12px; }
+    .user-plan { font-size: 10px; }
+    
+    .main { margin-left: 0; padding: 16px; }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+    .header-title { font-size: 22px; }
+    .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-value { font-size: 24px; }
+    
+    .grid-2, .grid-3, .grid-cols-2 { grid-template-columns: 1fr; }
+    .settings-grid { grid-template-columns: 1fr; }
+    
+    .login-box { width: 90%; max-width: 380px; padding: 32px 24px; }
+    .login-logo { font-size: 20px; }
+    
+    .modal { width: 90%; max-width: 420px; padding: 20px; }
+    .modal-title { font-size: 16px; }
+    
+    .detail-panel { width: 100%; }
+    
+    .account-card { flex-direction: column; align-items: flex-start; }
+    .account-stats { grid-template-columns: repeat(3, 1fr); width: 100%; }
+    
+    .btn { padding: 8px 14px; font-size: 12px; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    
+    .chart-wrap { height: 140px; }
+    .post-list { max-height: 200px; }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .logo { font-size: 14px; }
+    .header-title { font-size: 20px; }
+    .stat-value { font-size: 20px; }
+    .login-logo { font-size: 18px; }
+    .account-stats { grid-template-columns: 1fr; }
+  }
+
 </style>
 </head>
 <body>
