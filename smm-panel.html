@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMMPro – Panel</title>
+<title>MisSocialAgency Panel – MisTechnology.co</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 
 <!-- Firebase SDK (Compat version) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -28,7 +29,7 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
   .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
-  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; padding: 0 24px 32px; letter-spacing: -0.5px; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px; padding: 0 24px 32px; letter-spacing: -0.3px; line-height: 1.2; word-break: break-word; }
   .logo span { color: var(--accent); }
   .nav-section { padding: 0 12px; margin-bottom: 8px; }
   .nav-label { font-size: 10px; font-weight: 500; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; padding: 0 12px; margin-bottom: 6px; }
@@ -216,15 +217,45 @@
   .settings-section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
   .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
+  /* Login Page */
+  .login-page { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .login-page.hidden { display: none; }
+  .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 48px 40px; width: 420px; box-shadow: 0 20px 60px #00000040; }
+  .login-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; text-align: center; margin-bottom: 8px; letter-spacing: -0.8px; }
+  .login-subtitle { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 36px; }
+  .login-form { display: flex; flex-direction: column; gap: 16px; }
+  .login-input { width: 100%; padding: 14px 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s; }
+  .login-input:focus { outline: none; border-color: var(--accent); }
+  .login-btn { width: 100%; padding: 14px; background: var(--accent); color: #000; font-weight: 700; border: none; border-radius: 10px; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: filter 0.15s; margin-top: 8px; }
+  .login-btn:hover { filter: brightness(1.1); }
+  .login-footer { text-align: center; margin-top: 24px; font-size: 11px; color: var(--muted); }
+
 </style>
 </head>
 <body>
 
+<!-- LOGIN PAGE -->
+<div class="login-page" id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">MisSocialAgency</div>
+    <div class="login-subtitle">Sosyal Medya Yönetim Paneli</div>
+    <form class="login-form" onsubmit="handleLogin(event)">
+      <input type="email" class="login-input" id="loginEmail" placeholder="E-posta" required>
+      <input type="password" class="login-input" id="loginPassword" placeholder="Şifre" required>
+      <button type="submit" class="login-btn">Giriş Yap 🚀</button>
+    </form>
+    <div class="login-footer">
+      © 2026 MisTechnology.co - Tüm hakları saklıdır
+    </div>
+  </div>
+</div>
+
 <div class="tooltip" id="tooltip"></div>
 
 <nav class="sidebar">
-  <div class="logo">SMM<span>Pro</span></div>
-  <div class="nav-section">
+  <div class="logo">MisSocialAgency</div>
+  <div style="font-size:9px;color:var(--muted);padding:0 24px;margin-top:-20px;margin-bottom:20px;">MisTechnology.co yazılımıdır</div>
+  <div class="nav-section"></div>
     <div class="nav-label">Genel</div>
     <div class="nav-item active" onclick="go('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
     <div class="nav-item" onclick="go('calendar',this)"><span class="nav-icon">📅</span> Takvim</div>
@@ -240,10 +271,11 @@
     <div class="nav-item" onclick="go('accounts',this)"><span class="nav-icon">👤</span> Hesaplar</div>
     <div class="nav-item" onclick="go('settings',this)"><span class="nav-icon">⚙️</span> Ayarlar</div>
   </div>
-  <div class="sidebar-bottom"></div>
+  <div class="sidebar-bottom">
     <div class="user-card">
-      <div class="user-avatar">SP</div>
-      <div><div class="user-name">SMMPro</div><div class="user-plan">Yerel Panel</div></div>
+      <div class="user-avatar">M</div>
+      <div style="flex:1;"><div class="user-name" id="userName">Kullanıcı</div><div class="user-plan">MisSocialAgency</div></div>
+      <button class="btn btn-sm btn-danger" onclick="logout()" title="Çıkış Yap" style="padding:6px 10px;">🚪</button>
     </div>
   </div>
 </nav>
@@ -606,6 +638,46 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ---- LOGIN ----
+let currentUser = null;
+
+function handleLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  auth.signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      currentUser = userCredential.user;
+      document.getElementById('loginPage').classList.add('hidden');
+      notify('✅ Giriş başarılı!');
+      initApp();
+    })
+    .catch((error) => {
+      console.error('Login error:', error);
+      notify('⚠️ Giriş başarısız! E-posta veya şifre hatalı.');
+    });
+}
+
+function logout() {
+  auth.signOut().then(() => {
+    currentUser = null;
+    document.getElementById('loginPage').classList.remove('hidden');
+    notify('👋 Çıkış yapıldı!');
+  });
+}
+
+// Auth state değişikliğini dinle
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginPage').classList.add('hidden');
+  } else {
+    document.getElementById('loginPage').classList.remove('hidden');
+  }
+});
 
 // ---- CONSTANTS ----
 const ICONS = {Instagram:'📸',Twitter:'🐦',Facebook:'📘',YouTube:'▶️',LinkedIn:'💼',TikTok:'🎵'};
@@ -1459,20 +1531,38 @@ async function saveSettings(){
 }
 
 // ---- INIT ----
-// Firebase'den verileri yükle
-Promise.all([
-  loadPosts(),
-  loadAccounts(),
-  loadSettings()
-]).then(([postsData, accountsData, settingsData]) => {
-  posts = postsData;
-  accounts = accountsData;
-  settings = settingsData;
-  renderDash();
-}).catch(error => {
-  console.error('Başlatma hatası:', error);
-  notify('⚠️ Bağlantı hatası!');
-  renderDash(); // Boş veriyle de göster
+function initApp() {
+  // Kullanıcı adını göster
+  if(currentUser) {
+    document.getElementById('userName').textContent = currentUser.email.split('@')[0];
+  }
+  
+  // Firebase'den verileri yükle
+  Promise.all([
+    loadPosts(),
+    loadAccounts(),
+    loadSettings()
+  ]).then(([postsData, accountsData, settingsData]) => {
+    posts = postsData;
+    accounts = accountsData;
+    settings = settingsData;
+    renderDash();
+  }).catch(error => {
+    console.error('Başlatma hatası:', error);
+    notify('⚠️ Bağlantı hatası!');
+    renderDash(); // Boş veriyle de göster
+  });
+}
+
+// Auth state değiştiğinde init et
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginPage').classList.add('hidden');
+    initApp();
+  } else {
+    document.getElementById('loginPage').classList.remove('hidden');
+  }
 });
 </script>
 </body>
